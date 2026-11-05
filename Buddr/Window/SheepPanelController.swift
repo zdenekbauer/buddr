@@ -19,6 +19,8 @@ final class SheepPanelController {
     /// The agent the name plate names, and which of its parts are shown.
     private var namePlate: NamePlate?
     private var namePlateFields = NamePlate.Field.all
+    /// Whether a text longer than the plate scrolls; it is shortened otherwise.
+    private var namePlateScrolls = true
     /// What the name plate shows; `nil` without a plate.
     private var label: NamePlate.Label?
     /// Whether the plate is hidden although it has a text, while the sheep runs away and back.
@@ -87,13 +89,22 @@ final class SheepPanelController {
         updateLabel()
     }
 
+    /// Whether a text longer than the plate scrolls (while the sheep is animated) or is shortened with `…`.
+    func setNamePlateScrolls(_ scrolls: Bool) {
+        guard scrolls != namePlateScrolls else { return }
+        namePlateScrolls = scrolls
+        if let label {
+            plate.show(label, scrolls: scrolls)
+        }
+    }
+
     /// Draws the plate only when its text changes.
     private func updateLabel() {
         let label = namePlate?.label(showing: namePlateFields)
         guard label != self.label else { return }
         self.label = label
         if let label {
-            plate.show(label)
+            plate.show(label, scrolls: namePlateScrolls)
         }
         updatePlate()
     }
@@ -117,7 +128,9 @@ final class SheepPanelController {
                 panel.addChildWindow(plate, ordered: .above)
             }
             plate.orderFrontRegardless()
+            plate.setScrollingPaused(false)
         } else {
+            plate.setScrollingPaused(true)
             if plate.parent != nil {
                 panel.removeChildWindow(plate)
             }

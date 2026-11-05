@@ -499,14 +499,40 @@ enum SheepSprites {
             return shortenedTitle ?? PixelFont.shortened(label.text, maxWidth: maxWidth) ?? ""
         }
 
-        static func sprite(for plate: NamePlate.Label) -> PixelSprite {
-            let label = PixelFont.sprite(for: text(for: plate), color: Plate.text)
-            let width = label.width + 2 * paddingX
+        /// Plate pixels of empty space between the end of a scrolling text and its start coming in again.
+        static let scrollGap = 16
+
+        /// The plate with the text of `label`, shortened to `maxTextWidth` (`text(for:maxWidth:)`).
+        static func sprite(for label: NamePlate.Label) -> PixelSprite {
+            let ink = PixelFont.sprite(for: text(for: label), color: Plate.text)
+            return plate(textWidth: ink.width) { x, y in ink.color(x: x, y: y) }
+        }
+
+        /// The whole `text`, unshortened, for scrolling (`scrollingSprite(for:offset:maxWidth:)`).
+        static func textSprite(for label: NamePlate.Label) -> PixelSprite {
+            PixelFont.sprite(for: label.text, color: Plate.text)
+        }
+
+        /// A plate `maxWidth` pixels of text wide showing `text` (from `textSprite(for:)`) scrolled left by `offset`
+        /// pixels, followed by `scrollGap` and the text again, so it runs in a loop: offsets repeat every
+        /// `text.width + scrollGap`.
+        static func scrollingSprite(for text: PixelSprite, offset: Int, maxWidth: Int = maxTextWidth) -> PixelSprite {
+            let period = text.width + scrollGap
+            return plate(textWidth: maxWidth) { x, y in
+                text.color(x: (x + offset) % period, y: y)
+            }
+        }
+
+        /// A plate around a text area `textWidth` pixels wide, its pixels from `ink` (text area coordinates).
+        private static func plate(textWidth: Int, ink: (Int, Int) -> PixelColor?) -> PixelSprite {
+            let width = textWidth + 2 * paddingX
+            let textRows = paddingTop..<(paddingTop + PixelFont.height)
             let pixels = (0..<height).flatMap { y in
                 (0..<width).map { x -> PixelColor? in
                     let isCorner = (x == 0 || x == width - 1) && (y == 0 || y == height - 1)
                     if isCorner { return nil }
-                    return label.color(x: x - paddingX, y: y - paddingTop) ?? fill
+                    let isText = (paddingX..<(paddingX + textWidth)).contains(x) && textRows.contains(y)
+                    return (isText ? ink(x - paddingX, y - paddingTop) : nil) ?? fill
                 }
             }
             return PixelSprite(width: width, height: height, pixels: pixels)

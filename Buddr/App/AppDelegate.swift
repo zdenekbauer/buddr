@@ -83,6 +83,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideSeconds))
             panelController.setNamePlateFields(preferences.shownNamePlateFields)
+            // A long name scrolls unless nothing may move.
+            panelController.setNamePlateScrolls(preferences.animationMode != .off)
         }
         applyPreferences()
         preferences.onChange = applyPreferences

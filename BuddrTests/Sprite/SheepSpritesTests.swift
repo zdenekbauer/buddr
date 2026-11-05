@@ -43,6 +43,32 @@ struct SheepSpritesTests {
         #expect(sprite.color(x: Plate.paddingX + 1, y: Plate.paddingTop) == Plate.fill)
     }
 
+    @Test func scrollingPlateShowsTheTextFromTheOffsetAndThenItsStartAgain() {
+        typealias Plate = SheepSprites.Plate
+        let label = NamePlate.Label(lead: "buddr · ", title: "a long title that does not fit on the plate", more: 2)
+        let text = Plate.textSprite(for: label)
+        #expect(text.width == PixelFont.width(of: label.text))
+        let maxWidth = 40
+        let period = text.width + Plate.scrollGap
+
+        for offset in [0, 7, text.width - 3, period - 5] {
+            let sprite = Plate.scrollingSprite(for: text, offset: offset, maxWidth: maxWidth)
+            // The plate keeps its width and look; only the text moves.
+            #expect(sprite.width == maxWidth + 2 * Plate.paddingX)
+            #expect(sprite.height == Plate.height)
+            #expect(sprite.color(x: 0, y: 0) == nil)
+            #expect(sprite.color(x: 1, y: 0) == Plate.fill)
+            for y in 0..<PixelFont.height {
+                for x in 0..<maxWidth {
+                    let shown = sprite.color(x: Plate.paddingX + x, y: Plate.paddingTop + y)
+                    // The text repeats after the gap, which is empty plate.
+                    let expected = text.color(x: (x + offset) % period, y: y) ?? Plate.fill
+                    #expect(shown == expected, "offset \(offset), pixel (\(x), \(y))")
+                }
+            }
+        }
+    }
+
     @Test func plateTextThatFitsIsKept() {
         let plate = NamePlate.Label(lead: "buddr · ", title: "test123", more: 2)
         #expect(SheepSprites.Plate.text(for: plate) == "buddr · test123  +2")

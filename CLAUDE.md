@@ -54,7 +54,8 @@ Buddr/
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and
               back), HideMode (pure) + SheepHiding (hides the sheep after a while of calm), NamePlatePanel (child
-              panel) + NamePlateLayout (pure: plate scale, reserved room, placement)
+              panel) + NamePlateLayout (pure: plate scale, reserved room, placement) + NamePlateScroll (pure) /
+              NamePlateScroller (scrolls a long text)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, BuddySprites (what a character shows, its
               canvas, the panel size) + Buddy (the choice), SheepSprites (all sheep data: palette, grids, frame
               composition, clip timing; also the effect colors and the plate's look), StaffySprites (all dog data,
@@ -455,7 +456,15 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   `ľ`). Capitals and other marks are drawn without the mark; characters without a glyph become `?`. The font lives in
   its own file (not part of the character); the plate's colors (outline and wool), padding, gap, pixel size and
   `maxTextWidth` (100 px) are in `SheepSprites.Plate`.
-- Truncation by pixel width (`SheepSprites.Plate.text(for:maxWidth:)`, on `PixelFont.shortened`, one pass over the
+- A text longer than `maxTextWidth` scrolls (the user found the shortened text too short): the plate keeps that width
+  and the whole text (prefix, title, `+N`) moves left one plate pixel every `NamePlateScroll.step` (40 ms, about four
+  characters a second), followed by `Plate.scrollGap` (16 px) and the text again, in a loop; whenever its start is in
+  place it stays for `NamePlateScroll.pause` (2 s). `Plate.scrollingSprite(for:offset:maxWidth:)` draws one step from
+  the text sprite made once (`textSprite(for:)`); `NamePlateScroller` (injectable `sleep`) reports the offsets and
+  `NamePlatePanel` redraws. It scrolls only while the plate is shown (`setScrollingPaused`, from
+  `SheepPanelController.updatePlate`), starting from the text's start each time, and not at all with the animation
+  `off` (`SheepPanelController.setNamePlateScrolls`): then the text is shortened as before.
+- Shortening by pixel width (`SheepSprites.Plate.text(for:maxWidth:)`, on `PixelFont.shortened`, one pass over the
   text): only the title is shortened, ending in `…`; the prefix and `+N` are kept. If even those don't fit, the whole
   text is cut at the end.
 - A separate child window (`NamePlatePanel`), not a bigger sheep panel: the plate is wider than the sheep, and growing
@@ -469,7 +478,7 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   Re-laid out on every `setOrigin`, after a drag and on screen parameter changes. Plate pixel: the sheep's scale
   divided by `Plate.pixelDivisor`, at least one point (2 at the default scale 6).
 - The text follows the snapshot right away, without waiting for the running clip (≤ 1.6 s of mismatch). The plate is
-  redrawn only when its text changes. It stays in every animation mode and while petted, leaves with the sheep
+  redrawn only when its text changes, or while it scrolls. It stays in every animation mode and while petted, leaves with the sheep
   (fullscreen, hiding), and is hidden during the escape run itself (`SheepEscape` suppresses it once the startle or
   yawn is over and lifts it after the arrival). The menu bar list is unchanged.
 
@@ -528,7 +537,7 @@ tests are cheap and stable:
 - `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` and `StaffySprites` grids and frame composition (every character's clips
   are checked alike), `PixelSprite`, `SpriteFrame`, the
-  `PixelFont` glyphs, marks and truncation, the `SheepSprites.Plate` sprite.
+  `PixelFont` glyphs, marks and truncation, the `SheepSprites.Plate` sprite (also scrolled), `NamePlateScroll`.
 - Placement math in `SheepPanelController` (including the room reserved for the plate), `ScreenGeometry`,
   `EscapeRoute`, `NamePlateLayout`.
 - `HideMode` – which statuses are calm in each mode.
@@ -537,7 +546,7 @@ tests are cheap and stable:
 
 Also aim high, but these need a seam or a rendering step – never real-time waiting:
 
-- `HerdrPoller`, `HerdrMonitor`, `SheepAnimationDriver`, `SheepHiding` – timer-driven loops. They take injectable
+- `HerdrPoller`, `HerdrMonitor`, `SheepAnimationDriver`, `SheepHiding`, `NamePlateScroller` – timer-driven loops. They take injectable
   `sleep` (and the pollers `fetch`) closures, `HerdrMonitor` one `HerdrPoller.Feed` per kind of source; tests pass
   `ManualSleeper` (one per loop), which reports every sleep and suspends until `wake()`, so the loop is driven step by
   step, and `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and
