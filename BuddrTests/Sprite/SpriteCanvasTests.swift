@@ -46,9 +46,11 @@ struct SpriteCanvasTests {
         let body = PixelSprite(rows: ["RR", "R."], palette: Self.palette)
         let dot = PixelSprite(rows: ["B"], palette: Self.palette)
         // The dot covers the red pixel at (0, 1); the transparent pixel at (1, 1) stays transparent.
-        let frame = SpriteFrame(layers: [SpriteLayer(sprite: body, x: 0, y: 0), SpriteLayer(sprite: dot, x: 0, y: 1)])
+        let frame = SpriteFrame(
+            layers: [SpriteLayer(sprite: body, x: 0, y: 0), SpriteLayer(sprite: dot, x: 0, y: 1)], canvasWidth: 4,
+            canvasHeight: 3)
         let scale = 3
-        let bitmap = try render(SpriteCanvas(frame: frame, gridWidth: 4, gridHeight: 3, scale: scale))
+        let bitmap = try render(SpriteCanvas(frame: frame, scale: scale))
 
         #expect(bitmap.width == 4 * scale)
         #expect(bitmap.height == 3 * scale)
@@ -70,8 +72,9 @@ struct SpriteCanvasTests {
 
     @Test func appliesTheFrameOpacity() throws {
         let frame = SpriteFrame(
-            layers: [SpriteLayer(sprite: PixelSprite(rows: ["R"], palette: Self.palette), x: 0, y: 0)], opacity: 0.5)
-        let bitmap = try render(SpriteCanvas(frame: frame, gridWidth: 1, gridHeight: 1, scale: 2))
+            layers: [SpriteLayer(sprite: PixelSprite(rows: ["R"], palette: Self.palette), x: 0, y: 0)], canvasWidth: 1,
+            canvasHeight: 1, opacity: 0.5)
+        let bitmap = try render(SpriteCanvas(frame: frame, scale: 2))
 
         let pixel = bitmap.rgba(x: 1, y: 1)
         #expect((126...129).contains(pixel[3]))

@@ -194,7 +194,7 @@ struct SheepAnimatorTests {
         // The clip that was playing at 3 s finished first.
         #expect(animator.clipID == .workingStill)
         #expect(animator.frameIndex == 0)
-        #expect(elapsed < .seconds(3) + SheepSprites.clip(.working).cycleDuration)
+        #expect(elapsed < .seconds(3) + SheepSprites.sprites.clip(.working).cycleDuration)
 
         animator.setStatus(.blocked)
         finishCycle(&animator)
@@ -240,6 +240,21 @@ struct SheepAnimatorTests {
         animator.setAnimation(.always, for: .seconds(10))
         finishCycle(&animator)
         #expect(animator.clipID == .working)
+    }
+
+    @Test func anotherCharacterTakesOverWhenTheClipEnds() throws {
+        var animator = SheepAnimator(status: .working, seed: 1)
+        try #require(animator.clip.frames.count > 1)
+        animator.advance()
+        animator.setSprites(StaffySprites.sprites)
+
+        // The sheep's clip plays to its end, then the same state continues with the dog.
+        #expect(animator.frame == SheepSprites.sprites.clip(.working).frames[1])
+        advanceToLastFrame(&animator)
+        #expect(animator.frame == SheepSprites.sprites.clip(.working).frames.last)
+        animator.advance()
+        #expect(animator.clipID == .working)
+        #expect(animator.frame == StaffySprites.sprites.clip(.working).frames[0])
     }
 
     @Test func onChangeCountsTheTimeSinceTheLastChange() {

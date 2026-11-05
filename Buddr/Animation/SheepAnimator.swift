@@ -6,6 +6,8 @@
 ///
 /// Depending on the `AnimationMode`, a still pose of the state is chosen instead of its clip: always (`off`), or once
 /// the sheep has been animated for `animatesFor` since the status changed or `replay()` was called (`onChange`).
+///
+/// The clips come from the chosen character (`BuddySprites`); a new character also takes over when the clip ends.
 struct SheepAnimator {
     /// After this long in `idle` the sheep falls asleep.
     static let defaultSleepAfter: Duration = .seconds(60)
@@ -16,6 +18,9 @@ struct SheepAnimator {
     private(set) var clipID: SheepClipID
     private(set) var frameIndex = 0
     private(set) var mode: AnimationMode
+    private(set) var sprites: BuddySprites
+    /// Set by `setSprites(_:)`, used from the next clip on.
+    private var nextSprites: BuddySprites?
     /// How long the sheep is animated after a change in the `onChange` mode.
     private var animatesFor: Duration
 
@@ -29,10 +34,12 @@ struct SheepAnimator {
     private var timeSinceChange: Duration = .zero
 
     init(
-        status: AgentStatus = .unknown, mode: AnimationMode = .always, animatesFor: Duration = .zero,
-        sleepAfter: Duration = defaultSleepAfter, seed: UInt64 = .random(in: .min ... .max)
+        status: AgentStatus = .unknown, sprites: BuddySprites = SheepSprites.sprites, mode: AnimationMode = .always,
+        animatesFor: Duration = .zero, sleepAfter: Duration = defaultSleepAfter,
+        seed: UInt64 = .random(in: .min ... .max)
     ) {
         self.status = status
+        self.sprites = sprites
         self.mode = mode
         self.animatesFor = animatesFor
         self.sleepAfter = sleepAfter
@@ -42,7 +49,7 @@ struct SheepAnimator {
     }
 
     var clip: AnimationClip {
-        SheepSprites.clip(clipID)
+        sprites.clip(clipID)
     }
 
     var frame: AnimationFrame {
@@ -72,6 +79,11 @@ struct SheepAnimator {
         self.animatesFor = animatesFor
     }
 
+    /// Switches to another character; takes effect when the current clip ends.
+    mutating func setSprites(_ sprites: BuddySprites) {
+        nextSprites = sprites
+    }
+
     /// Moves past the current frame, which is assumed to have been shown for its full duration.
     mutating func advance() {
         if status == .idle {
@@ -81,6 +93,10 @@ struct SheepAnimator {
         if frameIndex + 1 < clip.frames.count {
             frameIndex += 1
         } else {
+            if let nextSprites {
+                sprites = nextSprites
+                self.nextSprites = nil
+            }
             clipID = chooseClip()
             frameIndex = 0
         }

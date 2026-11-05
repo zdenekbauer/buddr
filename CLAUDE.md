@@ -1,6 +1,6 @@
 # Buddr
 
-Buddr is a small native macOS desktop buddy: a pixel-art sheep sitting in a corner of the screen that reacts to the
+Buddr is a small native macOS desktop buddy: a pixel-art sheep (or a Staffy) sitting in a corner of the screen that reacts to the
 state of AI coding agents running in [herdr](https://herdr.dev) or in herdr-core (`hc`, the terminal runtime behind
 herdr-app). One character shows the aggregated state of all agents. It is information only – it never focuses,
 attaches to, or sends anything to agents.
@@ -55,8 +55,10 @@ Buddr/
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and
               back), HideMode (pure) + SheepHiding (hides the sheep after a while of calm), NamePlatePanel (child
               panel) + NamePlateLayout (pure: plate scale, reserved room, placement)
-  Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
-              grids, frame composition, clip timing, the plate's look), PixelFont (glyphs, marks, truncation)
+  Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, BuddySprites (what a character shows, its
+              canvas, the panel size) + Buddy (the choice), SheepSprites (all sheep data: palette, grids, frame
+              composition, clip timing; also the effect colors and the plate's look), StaffySprites (all dog data,
+              its own effect glyphs), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / SheepClipID, AnimationMode, SheepAnimator (pure state machine), SheepAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
@@ -87,7 +89,10 @@ CHANGELOG.md  one section per released version
 
 - Everything in the repo (code, comments, docs, commit messages) is in English.
 - No third-party dependencies. No image assets: all graphics are drawn in code from pixel grids.
-- All sprite pixel data lives in one file (`SheepSprites.swift`) so the character can be swapped easily.
+- All pixel data of a character lives in one file (`SheepSprites.swift`, `StaffySprites.swift`), so a character can
+  be redesigned or added in one place. A character provides a `BuddySprites` (its canvas, every `SheepClipID` clip,
+  the escape clips, the petting reaction) and draws and places its own effect glyphs (the colors come from
+  `SheepSprites.palette`).
 - Swift 6 strict concurrency: UI types are `@MainActor`; data crossing actors is `Sendable`. Default actor isolation
   is left at `nonisolated` (no `SWIFT_DEFAULT_ACTOR_ISOLATION`), and functions that must run off the main actor are
   marked `@concurrent`. Locks: `OSAllocatedUnfairLock` (`Mutex` needs macOS 15).
@@ -100,10 +105,24 @@ CHANGELOG.md  one section per released version
 
 - The character is an own sheep (one of the "herd"), not any agent's mascot – Buddr is tied to herdr, not to a
   specific agent, and it avoids trademark issues. The current sheep is a placeholder; before settling on the final
-  design, propose a few pixel-art variants to the user.
+  design, propose a few pixel-art variants to the user (render the grids to PNG with a throwaway script and show
+  them, at their real relative size). The second character is a Staffordshire Bull Terrier (`StaffySprites`,
+  "Staffy"), worked out with the user over several rounds of rendered variants: a first small profile on the sheep's
+  canvas was not recognizable, so it got a finer canvas (33 × 30) and a three-quarter view – the head turned to the
+  viewer, the body to the right – with a broad head and cheeks (not too big: the user rejected a chibi head), white
+  blaze and muzzle, a grin with the tongue out, open eyes with a highlight, rose ears, a short white bib, coat-colored
+  legs with white socks (all four the same height; two legs in front, two behind), a thin tail up. It is black (the
+  user dropped a brindle coat). The grids were generated from filled shapes with an automatic outline by a throwaway script, then pasted
+  as literals. Its head is high on the canvas, so its "?", ✔ bubble, hearts and "z"s float above the back and "!"
+  sits between the ears; a test keeps every effect off its head.
 - Sprites are drawn with SwiftUI `Canvas` at an integer scale without smoothing. Default scale 6; S/M/L (4/6/8) later.
   Sprites are character grids (`.` = transparent, other characters = palette colors); a frame is a stack of sprites
-  placed on a fixed canvas (`SheepSprites.canvasWidth` × `canvasHeight`) with room for effects above the sheep.
+  placed on the character's canvas (sheep 22 × 20, dog 33 × 30) with room for effects above the character. The panel
+  is the same for every character (`BuddySprites.panelWidth` × `panelHeight` = 22 × 20 units of the scale), so
+  switching never moves or resizes it; the canvas fills it with `BuddySprites.pixelSize(canvasWidth:scale:)` points
+  per pixel (sheep 6, dog 4 at the default scale; a test checks it is whole). Every `SpriteFrame` carries its canvas
+  size, so a frame of the previous character (still playing after a switch) is drawn and mirrored right. S/M/L will
+  need scales that keep every character's pixel whole (the dog's: multiples of 3), or other canvases.
   Effect glyphs can be drawn without an outline and get one from `PixelSprite.outlined(with:)`.
 - Window: borderless, transparent, non-activating `NSPanel` (`FloatingPanel`, never steals focus), `level = .floating`,
   on all Spaces (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
@@ -112,7 +131,7 @@ CHANGELOG.md  one section per released version
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is released)
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
-  agent list, the settings ("Agents from", "Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote
+  agent list, the settings ("Buddy", "Agents from", "Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote
   Machines") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
   width. A separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate
   itself to show one).
@@ -149,6 +168,11 @@ CHANGELOG.md  one section per released version
   2 s, its machines every 15 s, herdr-core with its machines every 2 s – so a slow machine or backend never delays the
   others, and shows the combined snapshot (`HerdrSnapshot.combining`: the sources of this Mac first, then the
   machines). Sources are queried concurrently. A part that didn't change since its last poll is not combined again.
+- The character is chosen in the menu bar ("Buddy": Sheep / Staffy; `Preferences.buddy`, key `buddy`: `sheep` /
+  `staffy`, default `sheep`). `SheepAnimationDriver.setSprites` offers it at
+  once to clips started from then on (petting, escape; a playing script keeps its clip), the state machine switches
+  when its clip ends (`SheepAnimator.setSprites`). The menu bar icon stays the sheep (the app's mark). It doesn't
+  change the cost, so `scripts/measure.swift` doesn't record it.
 - The backends are chosen in the menu bar ("Agents from": herdr / hc / Both; `Preferences.backendChoice`, key
   `agentBackends`: `herdr` / `hc` / `both`, default `both`). A chosen backend that is missing or not running is a
   failed source (⚠), also with Both – the user asked for it.
@@ -166,7 +190,7 @@ CHANGELOG.md  one section per released version
   A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
   queries by `herdr machine status` (see "herdr CLI").
 - Debug builds (`#if DEBUG`, set in the Debug configuration) show an orange "DEBUG" box in the menu bar list
-  (`DebugSection`, `DebugControls`): a button for every clip (`SheepSprites.allClips`), played once over whatever
+  (`DebugSection`, `DebugControls`): a button for every clip of the current character (`BuddySprites.allClips`), played once over whatever
   plays (`endScript()` + `interject`) or looped until "Stop Clip", optionally mirrored; "Run Away" / "Wander Off" /
   "Come Back" (`SheepEscape.Reason.debug(startled:)`); a status override that replaces the herdr status for the
   animation, hiding and the name plate (not for the list) – overridden to `blocked` / `done` without an agent in it,
@@ -300,9 +324,10 @@ Implementation (`SheepAnimator`):
 - `idle` picks `idleRest` / `idleBlink` / `idleLook` at random (seeded `SplitMix64`, deterministic in tests) and
   switches to `sleeping` after 60 s of continuous `idle`. Any status change resets the idle timer.
 - `done` plays `doneJump` when it starts and then every 4th cycle, `doneHold` otherwise.
-- `unknown` is drawn at `SheepSprites.unknownOpacity`.
+- `unknown` is drawn at `BuddySprites.unknownOpacity`.
 - Petting: a click on the sheep interrupts the current clip right away (unlike a state change) with
-  `SheepSprites.petted` – eye closed, blushing, a rising heart, a small hop. `SheepAnimationDriver.interject` plays it
+  the character's `petted` clip (sheep: eye closed, blushing, a rising heart, a small hop; dog: eye closed, tongue
+  out, a heart over its back, a hop). `SheepAnimationDriver.interject` plays it
   once and hands back to the state machine; it is ignored while a script (escape) or another interjection plays, and a
   script replaces it.
 - The sheep is composed of a body sprite and a head sprite drawn on top (offset `headX`/`headY`), so leg and head
@@ -361,7 +386,7 @@ Detection (`FullscreenDetector`, `FullscreenDebounce`, `FullscreenMonitor`):
 - The display is the one of the sheep's home (`SheepEscape.homeFrame`), not of the panel, which moves off the screen.
 - Logs: category `fullscreen` (on with the window's owner and layer, off).
 
-Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
+Escape (`SheepEscape`, `EscapeRoute`, `BuddySprites.Escape` of the current character):
 
 - Away: the current clip plays to its end (`SheepAnimationDriver.waitForCycleEnd`), a startled hop, the sheep turns
   to the nearer of the left and right screen edges (tie: right) and gallops until the panel is completely past it;
@@ -372,7 +397,7 @@ Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
   points) to keep the pixel-art look.
 - Each way plays to its end; if fullscreen ends before the clip does, the sheep doesn't leave at all. The panel
   ignores the mouse during the escape. If the home screen is gone, the sheep returns to the nearest one.
-- The sheep faces left; running right uses mirrored frames (`SpriteFrame.mirrored(canvasWidth:)`). Escape clips are
+- The sheep faces left; running right uses mirrored frames (`SpriteFrame.mirrored()`, within the frame's canvas). Escape clips are
   played as scripts by `SheepAnimationDriver` (`play` once, `loop`, `endScript`), outside the state machine, which
   keeps its target status and continues where it stopped.
 - With the animation mode `off` (`SheepAnimationDriver.animationMode`, read at the start of each way) the panel is
@@ -394,7 +419,7 @@ it the minutes in `hideAfterMinutes`, saved by versions that offered whole minut
 - The sheep can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`SheepHiding.show()`), which
   calls it back until another `hideSeconds` of calm.
 - Moving uses `SheepEscape` with the same route as the fullscreen escape. When hiding is the only reason, the sheep
-  leaves bored instead of startled: a yawn (`SheepSprites.Escape.yawn`; if the reason is gone by its end, it stays),
+  leaves bored instead of startled: a yawn (`BuddySprites.Escape.yawn`; if the reason is gone by its end, it stays),
   then a slow walk (`Escape.walk`, `EscapeRoute.Pace.walk`). It comes back running, like after a fullscreen window.
   `off` animation just hides the panel.
 - `SheepEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the sheep is away while there is any.
@@ -501,7 +526,8 @@ tests are cheap and stable:
   grandchildren; herdr-core's answers, terminals as agents, machine states, the socket path and
   `UnixSocketTransport` (not running, timeouts, cancellation).
 - `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
-- `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`, the
+- `Sprite/` data and models – `SheepSprites` and `StaffySprites` grids and frame composition (every character's clips
+  are checked alike), `PixelSprite`, `SpriteFrame`, the
   `PixelFont` glyphs, marks and truncation, the `SheepSprites.Plate` sprite.
 - Placement math in `SheepPanelController` (including the room reserved for the plate), `ScreenGeometry`,
   `EscapeRoute`, `NamePlateLayout`.

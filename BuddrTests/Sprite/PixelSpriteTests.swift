@@ -53,9 +53,12 @@ struct PixelSpriteTests {
 
     @Test func mirroredFrameKeepsLayersInsideTheCanvas() {
         let sprite = PixelSprite(rows: ["R."], palette: palette)
-        let frame = SpriteFrame(layers: [SpriteLayer(sprite: sprite, x: 1, y: 3)], opacity: 0.5)
+        let frame = SpriteFrame(
+            layers: [SpriteLayer(sprite: sprite, x: 1, y: 3)], canvasWidth: 10, canvasHeight: 8, opacity: 0.5)
         #expect(
-            frame.mirrored(canvasWidth: 10)
-                == SpriteFrame(layers: [SpriteLayer(sprite: sprite.mirrored(), x: 7, y: 3)], opacity: 0.5))
+            frame.mirrored()
+                == SpriteFrame(
+                    layers: [SpriteLayer(sprite: sprite.mirrored(), x: 7, y: 3)], canvasWidth: 10, canvasHeight: 8,
+                    opacity: 0.5))
     }
 }

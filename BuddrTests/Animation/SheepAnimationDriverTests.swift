@@ -51,10 +51,10 @@ struct SheepAnimationDriverTests {
 
     // MARK: Scripted clips
 
-    private static let script = SheepSprites.Escape.startle
+    private static let script = SheepSprites.sprites.escape.startle
 
     private static func mirrored(_ frame: AnimationFrame) -> SpriteFrame {
-        frame.sprite.mirrored(canvasWidth: SheepSprites.canvasWidth)
+        frame.sprite.mirrored()
     }
 
     @Test func playShowsTheClipOnceAndHoldsItsLastFrame() async {
@@ -127,9 +127,28 @@ struct SheepAnimationDriverTests {
         await driver.stop()
     }
 
+    @Test func anotherCharacterIsOfferedAtOnceButAPlayingScriptKeepsItsClip() async {
+        let driver = driver(SheepAnimator(status: .working, seed: 7))
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+        driver.start()
+        _ = await sleeps.next()
+        driver.loop(Self.script)
+        _ = await sleeps.next()
+
+        driver.setSprites(StaffySprites.sprites)
+
+        // Clips started from now on (petting, the escape) are the dog's; the running script stays the sheep's.
+        #expect(driver.sprites.petted == StaffySprites.sprites.petted)
+        #expect(driver.sprite == Self.script.frames[0].sprite)
+        sleeper.wake()
+        #expect(await sleeps.next() == Self.script.frames[1].duration)
+        #expect(driver.sprite == Self.script.frames[1].sprite)
+        await driver.stop()
+    }
+
     // MARK: Interjections
 
-    private static let interjection = SheepSprites.petted
+    private static let interjection = SheepSprites.sprites.petted
 
     @Test func interjectShowsTheClipOnceAndHandsBackToTheStateMachine() async {
         let animator = SheepAnimator(status: .working, seed: 7)

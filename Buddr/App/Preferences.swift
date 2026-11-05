@@ -5,8 +5,9 @@ import Observation
 @MainActor
 @Observable
 final class Preferences {
-    // Keys, choices and defaults of the settings that change the cost (all but the name plate) are mirrored in
-    // `Settings.read()` of scripts/measure.swift.
+    // Keys, choices and defaults of the settings that change the cost (all but the character and the name plate) are
+    // mirrored in `Settings.read()` of scripts/measure.swift.
+    private static let buddyKey = "buddy"
     private static let backendChoiceKey = "agentBackends"
     private static let watchesRemoteMachinesKey = "watchesRemoteMachines"
     private static let animationModeKey = "animationMode"
@@ -24,6 +25,14 @@ final class Preferences {
     /// The choices for `hideSeconds`: 5 s, 30 s, 1 min, 5 min, 15 min, 30 min.
     static let hideSecondsChoices = [5, 30, 60, 300, 900, 1800]
     static let defaultHideSeconds = 300
+
+    /// The character in the corner. The sheep by default.
+    var buddy: Buddy {
+        didSet {
+            defaults.set(buddy.rawValue, forKey: Self.buddyKey)
+            onChange?()
+        }
+    }
 
     /// Which backends the agents are read from. Both by default.
     var backendChoice: BackendChoice {
@@ -117,6 +126,7 @@ final class Preferences {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        buddy = defaults.string(forKey: Self.buddyKey).flatMap { Buddy(rawValue: $0) } ?? .sheep
         backendChoice =
             defaults.string(forKey: Self.backendChoiceKey).flatMap { BackendChoice(rawValue: $0) } ?? .both
         watchesRemoteMachines = defaults.object(forKey: Self.watchesRemoteMachinesKey) as? Bool ?? true

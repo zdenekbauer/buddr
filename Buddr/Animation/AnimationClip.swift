@@ -17,14 +17,14 @@ struct AnimationClip: Hashable, Sendable {
         frames.reduce(.zero) { $0 + $1.duration }
     }
 
-    /// The clip with every frame flipped horizontally within a canvas `canvasWidth` pixels wide.
-    func mirrored(canvasWidth: Int) -> AnimationClip {
-        AnimationClip(
-            frames.map { AnimationFrame(sprite: $0.sprite.mirrored(canvasWidth: canvasWidth), duration: $0.duration) })
+    /// The clip with every frame flipped horizontally within its canvas.
+    func mirrored() -> AnimationClip {
+        AnimationClip(frames.map { AnimationFrame(sprite: $0.sprite.mirrored(), duration: $0.duration) })
     }
 }
 
-/// Every clip the sheep can play. The pixels and timing of each clip live in `SheepSprites.clip(_:)`.
+/// Every clip the sheep can play. The pixels and timing of each clip come from the chosen character
+/// (`BuddySprites.clip(_:)`).
 enum SheepClipID: CaseIterable, Hashable, Sendable {
     case idleRest
     case idleBlink

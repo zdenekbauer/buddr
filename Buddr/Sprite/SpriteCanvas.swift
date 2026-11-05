@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// Draws a `SpriteFrame` as crisp pixels: every sprite pixel becomes a `scale` × `scale` point square.
+/// Draws a `SpriteFrame` as crisp pixels: every sprite pixel becomes a `scale` × `scale` point square, the view has
+/// the size of the frame's canvas.
 struct SpriteCanvas: View {
     let frame: SpriteFrame
-    let gridWidth: Int
-    let gridHeight: Int
     let scale: Int
 
     var body: some View {
@@ -20,7 +19,7 @@ struct SpriteCanvas: View {
     }
 
     private var size: CGSize {
-        Self.size(gridWidth: gridWidth, gridHeight: gridHeight, scale: scale)
+        Self.size(gridWidth: frame.canvasWidth, gridHeight: frame.canvasHeight, scale: scale)
     }
 
     /// Size in points of a canvas drawing a `gridWidth` × `gridHeight` pixel grid.

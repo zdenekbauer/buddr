@@ -95,7 +95,7 @@ final class SheepEscape {
         // Hiding alone is no hurry: the sheep yawns and wanders off. A fullscreen window startles it.
         let wandersOff = !reasons.contains(where: \.startles)
         if wandersOff {
-            await animation.play(SheepSprites.Escape.yawn)
+            await animation.play(animation.sprites.escape.yawn)
             guard wantsAway else {
                 // Something happened during the yawn.
                 animation.endScript()
@@ -103,7 +103,7 @@ final class SheepEscape {
                 return
             }
         } else {
-            await animation.play(SheepSprites.Escape.startle)
+            await animation.play(animation.sprites.escape.startle)
         }
         // The plate stays home: it would be cut off at the screen edge, and it comes back after the sheep.
         panel.setNamePlateSuppressed(true)
@@ -111,9 +111,10 @@ final class SheepEscape {
         let route = EscapeRoute(panelFrame: frame, screenFrame: screen.frame, pace: wandersOff ? .walk : .run)
         let towardsRight = route.edge == .right
         if towardsRight {
-            await animation.play(SheepSprites.Escape.turn, mirrored: true)
+            await animation.play(animation.sprites.escape.turn, mirrored: true)
         }
-        animation.loop(wandersOff ? SheepSprites.Escape.walk : SheepSprites.Escape.run, mirrored: towardsRight)
+        animation.loop(
+            wandersOff ? animation.sprites.escape.walk : animation.sprites.escape.run, mirrored: towardsRight)
         await move(from: route.home, to: route.away, duration: route.duration, easeOut: false)
         panel.setHidden(true)
         animation.endScript()
@@ -149,9 +150,9 @@ final class SheepEscape {
         let route = EscapeRoute(panelFrame: NSRect(origin: target, size: homeFrame.size), screenFrame: screen.frame)
         panel.setOrigin(route.away)
         panel.setHidden(false)
-        animation.loop(SheepSprites.Escape.run, mirrored: route.edge == .left)
+        animation.loop(animation.sprites.escape.run, mirrored: route.edge == .left)
         await move(from: route.away, to: route.home, duration: route.duration, easeOut: true)
-        await animation.play(SheepSprites.Escape.arrive)
+        await animation.play(animation.sprites.escape.arrive)
         animation.endScript()
     }
 

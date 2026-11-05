@@ -28,7 +28,9 @@ final class NamePlatePanel: FloatingPanel {
 
     private static func canvas(_ sprite: PixelSprite, scale: Int) -> SpriteCanvas {
         SpriteCanvas(
-            frame: SpriteFrame(layers: [SpriteLayer(sprite: sprite, x: 0, y: 0)]), gridWidth: sprite.width,
-            gridHeight: sprite.height, scale: scale)
+            frame: SpriteFrame(
+                layers: [SpriteLayer(sprite: sprite, x: 0, y: 0)], canvasWidth: sprite.width,
+                canvasHeight: sprite.height),
+            scale: scale)
     }
 }

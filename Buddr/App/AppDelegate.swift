@@ -23,7 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let panelController = SheepPanelController(animation: animation)
         let hiding = hiding
         panelController.onClick = {
-            animation.interject(SheepSprites.petted)
+            animation.interject(animation.sprites.petted)
             hiding.restartCountdown()
         }
         panelController.show()
@@ -79,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             herdrMonitor.configure(
                 backends: preferences.backendChoice.backends,
                 watchesRemoteMachines: preferences.watchesRemoteMachines)
+            animation.setSprites(preferences.buddy.sprites)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideSeconds))
             panelController.setNamePlateFields(preferences.shownNamePlateFields)

@@ -16,6 +16,26 @@ struct PreferencesTests {
         defaults.removePersistentDomain(forName: Self.suiteName)
     }
 
+    @Test func showsTheSheepByDefault() {
+        #expect(Preferences(defaults: defaults).buddy == .sheep)
+    }
+
+    @Test func buddyIsSavedAndReported() {
+        let preferences = Preferences(defaults: defaults)
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.buddy = .staffy
+
+        #expect(changes == 1)
+        #expect(Preferences(defaults: defaults).buddy == .staffy)
+    }
+
+    @Test func invalidSavedBuddyFallsBackToTheSheep() {
+        defaults.set("unicorn", forKey: "buddy")
+        #expect(Preferences(defaults: defaults).buddy == .sheep)
+    }
+
     @Test func watchesRemoteMachinesByDefault() {
         #expect(Preferences(defaults: defaults).watchesRemoteMachines)
     }

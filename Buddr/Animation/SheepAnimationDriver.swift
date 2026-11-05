@@ -9,6 +9,9 @@ import Observation
 @Observable
 final class SheepAnimationDriver {
     private(set) var sprite: SpriteFrame
+    /// The chosen character, for clips played outside the state machine (escape, petting). The state machine switches
+    /// to it when its current clip ends.
+    private(set) var sprites: BuddySprites
 
     @ObservationIgnored private var animator: SheepAnimator
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
@@ -35,6 +38,13 @@ final class SheepAnimationDriver {
         self.animator = animator
         self.sleep = sleep
         self.sprite = animator.frame.sprite
+        self.sprites = animator.sprites
+    }
+
+    /// See `SheepAnimator.setSprites(_:)`. A playing script keeps its clip.
+    func setSprites(_ sprites: BuddySprites) {
+        self.sprites = sprites
+        animator.setSprites(sprites)
     }
 
     func setStatus(_ status: AgentStatus) {
@@ -103,7 +113,7 @@ final class SheepAnimationDriver {
     }
 
     private static func oriented(_ clip: AnimationClip, _ mirrored: Bool) -> AnimationClip {
-        mirrored ? clip.mirrored(canvasWidth: SheepSprites.canvasWidth) : clip
+        mirrored ? clip.mirrored() : clip
     }
 
     private var currentFrame: AnimationFrame {

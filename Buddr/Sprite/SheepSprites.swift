@@ -1,9 +1,11 @@
-// All pixel data of the sheep lives in this file, so the character can be redesigned or swapped in one place: the
-// palette, the grids, how they are composed into frames, and the frame timing of every animation clip.
+// All pixel data of the sheep lives in this file, so the character can be redesigned in one place: the palette, the
+// grids, how they are composed into frames, and the frame timing of every animation clip. The effect glyphs ("!", "?",
+// "z", hearts, dust, the check bubble) and the name plate's look are shared by all characters (`Buddy`).
 // The current sheep is a placeholder.
 
 enum SheepSprites {
-    /// Size of the sprite canvas in pixels: the sheep plus room for effects above and behind it.
+    /// Size of the sprite canvas in pixels: the sheep plus room for effects above and behind it. It is the panel
+    /// (`BuddySprites.panelWidth` × `panelHeight`).
     static let canvasWidth = 22
     static let canvasHeight = 20
     /// Top-left corner of the sheep body on the canvas when standing.
@@ -12,8 +14,7 @@ enum SheepSprites {
     /// Offset of the head relative to the body.
     static let headX = 0
     static let headY = 1
-    /// Opacity of the whole picture while the state is unknown.
-    static let unknownOpacity = 0.45
+    private static let unknownOpacity = BuddySprites.unknownOpacity
     /// Size of one menu bar icon pixel in points: a whole number of device pixels on every display.
     static let menuBarIconPointsPerPixel = 1.0
 
@@ -307,14 +308,25 @@ enum SheepSprites {
     private static func frame(
         _ milliseconds: Int, _ layers: [SpriteLayer], opacity: Double = 1
     ) -> AnimationFrame {
-        AnimationFrame(sprite: SpriteFrame(layers: layers, opacity: opacity), duration: .milliseconds(milliseconds))
+        AnimationFrame(sprite: spriteFrame(layers, opacity: opacity), duration: .milliseconds(milliseconds))
+    }
+
+    private static func spriteFrame(_ layers: [SpriteLayer], opacity: Double = 1) -> SpriteFrame {
+        SpriteFrame(layers: layers, canvasWidth: canvasWidth, canvasHeight: canvasHeight, opacity: opacity)
     }
 
     // MARK: Clips
 
     // Keep every clip short (well under 1.5 s): a clip always plays to its end before the state machine switches.
 
-    static func clip(_ id: SheepClipID) -> AnimationClip {
+    static let sprites = BuddySprites(
+        canvasWidth: canvasWidth, canvasHeight: canvasHeight, clip: clip,
+        escape: BuddySprites.Escape(
+            startle: Escape.startle, yawn: Escape.yawn, turn: Escape.turn, run: Escape.run, walk: Escape.walk,
+            arrive: Escape.arrive),
+        petted: petted)
+
+    private static func clip(_ id: SheepClipID) -> AnimationClip {
         switch id {
         case .idleRest: Clip.idleRest
         case .idleBlink: Clip.idleBlink
@@ -384,7 +396,7 @@ enum SheepSprites {
         static let idleStill = still(idleRest.frames[0].sprite)
         static let sleepingStill = still(sleeping.frames[1].sprite)
         static let workingStill = still(
-            SpriteFrame(layers: sheep(body: Body.trotA) + [largeDust, fleck(20, 7), fleck(19, 4)]))
+            spriteFrame(sheep(body: Body.trotA) + [largeDust, fleck(20, 7), fleck(19, 4)]))
         static let blockedStill = still(blocked.frames[0].sprite)
         static let doneStill = still(doneHold.frames[1].sprite)
         static let unknownStill = still(unknown.frames[1].sprite)
@@ -398,9 +410,8 @@ enum SheepSprites {
     // MARK: Escape
 
     /// Clips of leaving the screen – escaping from a fullscreen window or wandering off bored when it hides – and of
-    /// the return. They are played by `SheepEscape` rather than the state machine; the sheep faces left, moving right
-    /// uses the mirrored frames.
-    enum Escape {
+    /// the return (`BuddySprites.Escape`).
+    private enum Escape {
         /// A startled hop with an open mouth before running away.
         static let startle = AnimationClip([
             frame(120, sheep(head: Head.bleat)),
@@ -447,7 +458,7 @@ enum SheepSprites {
 
     /// The reaction to a click: the sheep leans into the hand with its eye closed, a heart rises and it gives a small
     /// happy hop. Played by the driver as an interjection, outside the state machine.
-    static let petted = AnimationClip([
+    private static let petted = AnimationClip([
         frame(120, sheep(head: Head.content, headDY: 1)),
         frame(160, sheep(head: Head.content) + [smallHeart(3)]),
         frame(160, sheep(head: Head.content, headDY: 1) + [smallHeart(2)]),
@@ -457,18 +468,6 @@ enum SheepSprites {
         frame(200, sheep(head: Head.content) + [largeHeart(0)]),
         frame(200, sheep()),
     ])
-
-    /// Every clip with a name: the state machine's, the escape's and the petting reaction.
-    static let allClips: [(name: String, clip: AnimationClip)] =
-        SheepClipID.allCases.map { ("\($0)", clip($0)) } + [
-            ("escapeStartle", Escape.startle),
-            ("escapeYawn", Escape.yawn),
-            ("escapeTurn", Escape.turn),
-            ("escapeRun", Escape.run),
-            ("escapeWalk", Escape.walk),
-            ("escapeArrive", Escape.arrive),
-            ("petted", petted),
-        ]
 
     // MARK: Name plate
 

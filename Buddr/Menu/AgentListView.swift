@@ -19,7 +19,7 @@ struct AgentListView: View {
                         .font(.headline)
                     Spacer()
                     if hiding.isHidden {
-                        Button("Show Sheep") {
+                        Button("Show \(preferences.buddy.name)") {
                             hiding.show()
                         }
                     }
@@ -40,6 +40,7 @@ struct AgentListView: View {
                 Divider()
             #endif
             VStack(alignment: .leading, spacing: 8) {
+                BuddySettings(preferences: preferences)
                 BackendSettings(preferences: preferences)
                 AnimationSettings(preferences: preferences)
                 HideSettings(preferences: preferences)
@@ -65,6 +66,20 @@ struct AgentListView: View {
     /// "1 blocked · 2 working", or "No agents".
     private static func summary(_ counts: [AgentOverview.StatusCount]) -> String {
         counts.isEmpty ? "No agents" : counts.map { "\($0.count) \($0.status.rawValue)" }.joined(separator: " · ")
+    }
+}
+
+/// "Buddy: Sheep / Staffy".
+private struct BuddySettings: View {
+    @Bindable var preferences: Preferences
+
+    var body: some View {
+        Picker("Buddy", selection: $preferences.buddy) {
+            ForEach(Buddy.allCases, id: \.self) { buddy in
+                Text(buddy.name).tag(buddy)
+            }
+        }
+        .fixedSize()
     }
 }
 
